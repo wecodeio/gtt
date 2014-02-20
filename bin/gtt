@@ -1,0 +1,65 @@
+#!/usr/bin/env ruby
+
+require 'getoptlong'
+
+status = true
+
+opts = GetoptLong.new(
+  [ '--help', '-h', GetoptLong::NO_ARGUMENT ],
+  [ '--init', '-i', GetoptLong::NO_ARGUMENT ],
+  [ '--prev', '-p', GetoptLong::NO_ARGUMENT ],
+  [ '--next', '-n', GetoptLong::NO_ARGUMENT ],
+  [ '--clean', '-c', GetoptLong::NO_ARGUMENT ]
+)
+
+opts.each do |opt, arg|
+  case opt
+    when '--help'
+      puts <<-EOF
+gtt [OPTION]
+
+-h, --help:
+   show help
+
+-i, --init:
+   creates gtt-tags for traverse
+
+-c, --clean:
+   removes gtt-tags
+
+-p, --prev:
+   travels back one commit
+
+-n, --next:
+   travels forth one commit
+
+      EOF
+    when '--init'
+      # check NOT initialized
+      status &= system 'git tag gtt-first `git rev-list --topo-order HEAD | tail -1`'
+      status &= system 'git tag gtt-last'
+      puts 'Initialized gtt-tags. Now you can traverse' if status
+    when '--clean'
+      # check if initialized
+      status &= system 'git checkout gtt-last'
+      status &= system 'git tag -d gtt-first'
+      status &= system 'git tag -d gtt-last'
+      puts 'Removed gtt-tags. Now your repo is clean' if status
+    when '--prev'
+      # check if initialized
+      status &= system 'git checkout HEAD~'
+      puts 'Traveled back in time!' if status
+      puts 'You are already at the beginning of the time' if !status
+    when '--next'
+      # check if initialized
+      status &= system 'git checkout `git rev-list --topo-order HEAD..gtt-last | tail -1`'
+      puts 'Moved on' if status
+  end
+end
+
+if ARGV.length != 0
+  puts "Command does not take any argument (try --help)"
+  exit 0
+end
+
+exit status ? 0 : 1
